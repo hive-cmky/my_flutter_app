@@ -11,20 +11,26 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:my_flutter_app/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets('Form screen smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Verify that the AppBar title is correct.
+    expect(find.text('Resident Certificate'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Verify that the main sections are present.
+    expect(find.text('PERSONAL DETAILS'), findsOneWidget);
+    expect(find.text('PRESENT ADDRESS'), findsOneWidget);
+    expect(find.text('PERMANENT ADDRESS'), findsOneWidget);
+    expect(find.text('GUARDIAN DETAILS'), findsOneWidget);
+    expect(find.text('PURPOSE'), findsOneWidget);
+    expect(find.text('SUPPORTING DOCUMENT'), findsOneWidget);
+    expect(find.text('DECLARATION'), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify that the submit button is present.
+    expect(find.widgetWithText(ElevatedButton, 'Submit'), findsOneWidget);
+
+    // Example: Find the 'Name' field
+    expect(find.text('Name *'), findsOneWidget);
   });
 }
