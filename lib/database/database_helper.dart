@@ -1,163 +1,296 @@
-// ============================================================================
-// FILE: lib/database/database_helper.dart
-// PURPOSE: SQLite database operations for dropdowns and form submissions
-// ============================================================================
+// ===================================================
+// DATABASE HELPER - FIXED VERSION
+// Returns 'code' (Organization Unit Code) for API submission
+// Returns 'org_code' (same as 'code') for fetching children
+// ===================================================
 
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'dart:convert';
-import 'package:flutter/foundation.dart'; // Import for kDebugMode
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
-  static Database? _database;
+
+  static Database? _lgdDb;
+  static Database? _coverageDb;
+  static Database? _ricDb;
 
   DatabaseHelper._init();
 
-  Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDB('resident_cert.db');
-    return _database!;
+  String _cleanName(String fullName) {
+    if (fullName.isEmpty) return '';
+    final match = RegExp(r'-\s*([^)]+)').firstMatch(fullName);
+    if (match != null) return match.group(1)!.trim();
+    return fullName.replaceAll(')', '').trim();
   }
 
-  Future<Database> _initDB(String filePath) async {
+  Future<Database> get lgdDatabase async {
+    if (_lgdDb != null) return _lgdDb!;
+    _lgdDb = await _initDB('lgd_master.db');
+    return _lgdDb!;
+  }
+
+  Future<Database> get coverageDatabase async {
+    if (_coverageDb != null) return _coverageDb!;
+    _coverageDb = await _initDB('coverage_location.db');
+    return _coverageDb!;
+  }
+
+  Future<Database> get ricDatabase async {
+    if (_ricDb != null) return _ricDb!;
+    _ricDb = await _initDB('ric_master.db');
+    return _ricDb!;
+  }
+
+  Future<Database> _initDB(String fileName) async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
+    final path = join(dbPath, fileName);
 
-    return await openDatabase(
-      path,
-      version: 2, // <-- Incremented version to trigger upgrade
-      onCreate: _createDB,
-      onUpgrade: _onUpgrade, // <-- Added upgrade callback
-    );
-  }
-
-  // This function is called when the database is upgraded from version 1 to 2.
-  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // For development, the simplest upgrade strategy is to drop all tables and recreate.
-    await db.execute('DROP TABLE IF EXISTS ris');
-    await db.execute('DROP TABLE IF EXISTS villages');
-    await db.execute('DROP TABLE IF EXISTS tehsils');
-    await db.execute('DROP TABLE IF EXISTS districts');
-    await db.execute('DROP TABLE IF EXISTS form_submissions');
-    await _createDB(db, newVersion);
-  }
-  
-  // Create all tables
-  Future _createDB(Database db, int version) async {
-    await db.execute('CREATE TABLE districts (id INTEGER PRIMARY KEY, name TEXT NOT NULL)');
-    await db.execute('CREATE TABLE tehsils (id INTEGER PRIMARY KEY, district_id INTEGER NOT NULL, name TEXT NOT NULL, FOREIGN KEY (district_id) REFERENCES districts (id))');
-    await db.execute('CREATE TABLE villages (id INTEGER PRIMARY KEY AUTOINCREMENT, tehsil_id INTEGER NOT NULL, name TEXT NOT NULL, FOREIGN KEY (tehsil_id) REFERENCES tehsils (id))');
-    await db.execute('CREATE TABLE ris (id INTEGER PRIMARY KEY AUTOINCREMENT, tehsil_id INTEGER NOT NULL, name TEXT NOT NULL, FOREIGN KEY (tehsil_id) REFERENCES tehsils (id))');
-    await db.execute('CREATE TABLE form_submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, form_data TEXT NOT NULL, created_at TEXT NOT NULL, synced INTEGER DEFAULT 0)');
-
-    await _insertDummyData(db);
-  }
-
-  // Insert complete sample data for all defined tehsils
-  Future _insertDummyData(Database db) async {
-    // Insert Districts
-    await db.insert('districts', {'id': 1, 'name': 'Khordha'});
-    await db.insert('districts', {'id': 2, 'name': 'Cuttack'});
-    await db.insert('districts', {'id': 3, 'name': 'Puri'});
-
-    // --- KHORDHA (District 1) ---
-    await db.insert('tehsils', {'id': 101, 'district_id': 1, 'name': 'Bhubaneswar'});
-    await db.insert('villages', {'tehsil_id': 101, 'name': 'Chandrasekharpur'});
-    await db.insert('villages', {'tehsil_id': 101, 'name': 'Patia'});
-    await db.insert('ris', {'tehsil_id': 101, 'name': 'RI Circle-1 (Bbsr)'});
-    await db.insert('ris', {'tehsil_id': 101, 'name': 'RI Circle-2 (Bbsr)'});
-    
-    await db.insert('tehsils', {'id': 102, 'district_id': 1, 'name': 'Jatni'});
-    await db.insert('villages', {'tehsil_id': 102, 'name': 'Jatni Town'});
-    await db.insert('villages', {'tehsil_id': 102, 'name': 'Khurda Road'});
-    await db.insert('ris', {'tehsil_id': 102, 'name': 'RI Circle-1 (Jatni)'});
-    
-    await db.insert('tehsils', {'id': 103, 'district_id': 1, 'name': 'Balipatna'});
-    await db.insert('villages', {'tehsil_id': 103, 'name': 'Balipatna Village'});
-    await db.insert('ris', {'tehsil_id': 103, 'name': 'RI Circle (Balipatna)'});
-
-    await db.insert('tehsils', {'id': 104, 'district_id': 1, 'name': 'Tangi'});
-    await db.insert('villages', {'tehsil_id': 104, 'name': 'Tangi Village'});
-    await db.insert('ris', {'tehsil_id': 104, 'name': 'RI Circle (Tangi)'});
-    
-    // --- CUTTACK (District 2) ---
-    await db.insert('tehsils', {'id': 201, 'district_id': 2, 'name': 'Cuttack Sadar'});
-    await db.insert('villages', {'tehsil_id': 201, 'name': 'Sadar Village 1'});
-    await db.insert('ris', {'tehsil_id': 201, 'name': 'RI Circle (Cuttack Sadar)'});
-
-    await db.insert('tehsils', {'id': 202, 'district_id': 2, 'name': 'Banki'});
-    await db.insert('villages', {'tehsil_id': 202, 'name': 'Banki Village'});
-    await db.insert('ris', {'tehsil_id': 202, 'name': 'RI Circle (Banki)'});
-
-    await db.insert('tehsils', {'id': 203, 'district_id': 2, 'name': 'Athgarh'});
-    await db.insert('villages', {'tehsil_id': 203, 'name': 'Athgarh Village'});
-    await db.insert('ris', {'tehsil_id': 203, 'name': 'RI Circle (Athgarh)'});
-
-    // --- PURI (District 3) ---
-    await db.insert('tehsils', {'id': 301, 'district_id': 3, 'name': 'Puri Sadar'});
-    await db.insert('villages', {'tehsil_id': 301, 'name': 'Puri Town'});
-    await db.insert('ris', {'tehsil_id': 301, 'name': 'RI Circle (Puri Sadar)'});
-
-    await db.insert('tehsils', {'id': 302, 'district_id': 3, 'name': 'Nimapara'});
-    await db.insert('villages', {'tehsil_id': 302, 'name': 'Nimapara Village'});
-    await db.insert('ris', {'tehsil_id': 302, 'name': 'RI Circle (Nimapara)'});
-  }
-
-  // ========== GET METHODS ==========
-
-  Future<List<Map<String, dynamic>>> getDistricts() async {
-    final db = await database;
-    return await db.query('districts', orderBy: 'name ASC');
-  }
-
-  Future<List<Map<String, dynamic>>> getTehsilsByDistrict(int districtId) async {
-    final db = await database;
-    return await db.query('tehsils', where: 'district_id = ?', whereArgs: [districtId], orderBy: 'name ASC');
-  }
-
-  Future<List<Map<String, dynamic>>> getVillagesByTehsil(int tehsilId) async {
-    final db = await database;
-    return await db.query('villages', where: 'tehsil_id = ?', whereArgs: [tehsilId], orderBy: 'name ASC');
-  }
-
-  Future<List<Map<String, dynamic>>> getRIsByTehsil(int tehsilId) async {
-    final db = await database;
-    return await db.query('ris', where: 'tehsil_id = ?', whereArgs: [tehsilId], orderBy: 'name ASC');
-  }
-
-  // ========== FORM SUBMISSION METHODS ==========
-
-  Future<int> saveFormSubmission(Map<String, dynamic> formData) async {
-    final db = await database;
-    final jsonPayload = jsonEncode(formData);
-
-    if (kDebugMode) {
-      print('--- FORM SUBMISSION JSON ---');
-      print(jsonPayload);
-      print('--------------------------');
+    if (kDebugMode && await File(path).exists()) {
+      await File(path).delete();
     }
 
-    return await db.insert('form_submissions', {
-      'form_data': jsonPayload,
-      'created_at': DateTime.now().toIso8601String(),
-      'synced': 0,
-    });
+    if (!await File(path).exists()) {
+      await Directory(dirname(path)).create(recursive: true);
+      final data = await rootBundle.load('assets/db/$fileName');
+      final bytes = data.buffer.asUint8List();
+      await File(path).writeAsBytes(bytes, flush: true);
+    }
+
+    return openDatabase(path, readOnly: true);
   }
 
-  Future<List<Map<String, dynamic>>> getUnsyncedSubmissions() async {
-    final db = await database;
-    return await db.query('form_submissions', where: 'synced = ?', whereArgs: [0]);
+  // ================= DISTRICTS =================
+  Future<List<Map<String, String>>> getDistricts() async {
+    final db = await lgdDatabase;
+
+    final results = await db.query(
+      'Sheet1',
+      where: 'LOWER("Administrative Office Unit Level") = ?',
+      whereArgs: ['district'],
+      orderBy: '"Administrative Office  Entity Name" ASC',
+    );
+
+    if (results.isEmpty) return [];
+
+    final List<Map<String, String>> districts = [];
+
+    for (final d in results) {
+      final String name = (d['Administrative Office  Entity Name'] as String?) ?? '';
+      final String lgdCode = (d['Administrative Entity Code'] as String?) ?? '';
+      final String orgCode = (d['Organization Unit Code'] as String?) ?? '';
+
+      if (name.trim().isEmpty) continue;
+
+      districts.add({
+        'name': _cleanName(name),
+        'code': orgCode.trim(),           // ✅ Organization Unit Code (for API)
+        'org_code': orgCode.trim(),       // ✅ Same, for fetching children
+        'lgd_code': lgdCode.trim(),       // ✅ Keep this for reference
+      });
+    }
+
+    return districts;
   }
 
-  Future<int> markAsSynced(int id) async {
-    final db = await database;
-    return await db.update('form_submissions', {'synced': 1}, where: 'id = ?', whereArgs: [id]);
+  // ================= TEHSILS =================
+  Future<List<Map<String, String>>> getTehsils(String districtOrgCode) async {
+    if (districtOrgCode.isEmpty) return [];
+
+    final db = await lgdDatabase;
+
+    final results = await db.rawQuery('''
+      SELECT *
+      FROM Sheet1
+      WHERE LOWER("Administrative Office Unit Level") = 'tehsil'
+        AND "Parent Org Unit Code" IN (
+          SELECT "Organization Unit Code"
+          FROM Sheet1
+          WHERE "Organization Unit Code" = ?
+             OR (
+               LOWER("Administrative Office Unit Level") = 'sub division'
+               AND "Parent Org Unit Code" = ?
+             )
+        )
+      ORDER BY "Administrative Office  Entity Name" ASC
+    ''', [districtOrgCode, districtOrgCode]);
+
+    if (results.isEmpty) return [];
+
+    final List<Map<String, String>> tehsils = [];
+
+    for (final d in results) {
+      final String name = (d['Administrative Office  Entity Name'] as String?) ?? '';
+      final String lgdCode = (d['Administrative Entity Code'] as String?) ?? '';
+      final String orgCode = (d['Organization Unit Code'] as String?) ?? '';
+
+      if (name.trim().isEmpty) continue;
+
+      tehsils.add({
+        'name': _cleanName(name),
+        'code': orgCode.trim(),           // ✅ Organization Unit Code (for API)
+        'org_code': orgCode.trim(),       // ✅ Same, for fetching children
+        'lgd_code': lgdCode.trim(),       // ✅ Keep this for reference
+      });
+    }
+
+    return tehsils;
   }
 
-  Future close() async {
-    final db = await database;
-    _database = null;
-    db.close();
+  // ================= RI / REVENUE CIRCLE =================
+  Future<List<Map<String, String>>> getRIs(String tehsilOrgCode) async {
+    if (tehsilOrgCode.isEmpty) return [];
+
+    final db = await lgdDatabase;
+
+    final results = await db.query(
+      'Sheet1',
+      where: '''
+        LOWER("Administrative Office Unit Level") = 'revenue circle'
+        AND "Parent Org Unit Code" = ?
+      ''',
+      whereArgs: [tehsilOrgCode],
+      orderBy: '"Administrative Office  Entity Name" ASC',
+    );
+
+    if (results.isEmpty) return [];
+
+    final List<Map<String, String>> ris = [];
+
+    for (final d in results) {
+      final String name = (d['Administrative Office  Entity Name'] as String?) ?? '';
+      final String lgdCode = (d['Administrative Entity Code'] as String?) ?? '';
+      final String orgCode = (d['Organization Unit Code'] as String?) ?? '';
+
+      if (name.trim().isEmpty) continue;
+
+      ris.add({
+        'name': _cleanName(name),
+        'code': orgCode.trim(),           // ✅ Organization Unit Code (for API)
+        'org_code': orgCode.trim(),       // ✅ Same, for fetching children (villages)
+        'lgd_code': lgdCode.trim(),       // ✅ Keep this for reference
+      });
+    }
+
+    return ris;
+  }
+
+  // ================= VILLAGES =================
+  Future<List<Map<String, String>>> getVillages(String riOrgCode) async {
+    if (riOrgCode.trim().isEmpty) return [];
+
+    final db = await ricDatabase;
+
+    final results = await db.rawQuery('''
+      SELECT
+        "Coverage Entity Name",
+        "Coverage Entity Code"
+      FROM Sheet1
+      WHERE TRIM("Organization Unit Code") = ?
+        AND "Coverage Entity Type" IS NOT NULL
+        AND LOWER("Coverage Entity Type") LIKE '%village%'
+      ORDER BY "Coverage Entity Name" ASC
+    ''', [riOrgCode.trim()]);
+
+    if (results.isEmpty) return [];
+
+    final List<Map<String, String>> villages = [];
+
+    for (final row in results) {
+      final String name = (row['Coverage Entity Name'] as String?) ?? '';
+      final String code = (row['Coverage Entity Code'] as String?) ?? '';
+
+      if (name.trim().isEmpty) continue;
+
+      villages.add({
+        'name': name.trim(),
+        'code': code.trim(),              // ✅ Coverage Entity Code (for API)
+        'village_id': code.trim(),        // ✅ Same, kept for compatibility
+      });
+    }
+
+    return villages;
+  }
+
+  // ================= COVERAGE LOCATION =================
+  Future<Map<String, String>?> getCoverageLocation(String tehsilName) async {
+    if (tehsilName.isEmpty) return null;
+
+    final db = await coverageDatabase;
+
+    print('🔍 DEBUG: Searching coverage for tehsil: "$tehsilName"');
+
+    try {
+      // Clean the tehsil name for matching
+      final cleanedTehsilName = tehsilName.trim().toLowerCase();
+
+      // Get all rows for matching
+      final allRows = await db.query('coverage_location');
+
+      // Try to find a match
+      for (final row in allRows) {
+        final locationName = row['Coverage Location Name']?.toString() ?? '';
+        final locationId = row['Coverage Location ID']?.toString() ?? '';
+
+        // Extract tehsil name from pattern: "Office of the Tehsildar(Tehsil- ANGUL )"
+        final patternMatch = RegExp(r'Tehsil-\s*([^)]+)', caseSensitive: false)
+            .firstMatch(locationName);
+
+        if (patternMatch != null) {
+          final extractedTehsil = patternMatch.group(1)?.trim() ?? '';
+          final extractedTehsilLower = extractedTehsil.toLowerCase();
+
+          // Compare tehsil names (case-insensitive)
+          if (extractedTehsilLower == cleanedTehsilName) {
+            print('✅ DEBUG: Found exact match for "$tehsilName"');
+
+            // ✅ FIX: Remove ".0" from the ID for API
+            String cleanId = locationId;
+            if (cleanId.endsWith('.0')) {
+              cleanId = cleanId.substring(0, cleanId.length - 2);
+            }
+
+            print('   - Original ID: $locationId');
+            print('   - Clean ID: $cleanId');
+            print('   - Location Name: $locationName');
+
+            return {
+              'id': cleanId,        // ✅ "1588130" instead of "1588130.0"
+              'name': locationName.trim(),
+            };
+          }
+        }
+      }
+
+      // If exact pattern match fails, try partial match
+      for (final row in allRows) {
+        final locationName = row['Coverage Location Name']?.toString() ?? '';
+        final locationId = row['Coverage Location ID']?.toString() ?? '';
+
+        if (locationName.toLowerCase().contains(cleanedTehsilName)) {
+          print('✅ DEBUG: Found partial match for "$tehsilName"');
+
+          // ✅ FIX: Remove ".0" from the ID for API
+          String cleanId = locationId;
+          if (cleanId.endsWith('.0')) {
+            cleanId = cleanId.substring(0, cleanId.length - 2);
+          }
+
+          return {
+            'id': cleanId,        // ✅ "1588130" instead of "1588130.0"
+            'name': locationName.trim(),
+          };
+        }
+      }
+
+      print('❌ DEBUG: No coverage location found for "$tehsilName"');
+      return null;
+
+    } catch (e) {
+      print('❌ ERROR in getCoverageLocation: $e');
+      return null;
+    }
   }
 }
