@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
+import 'dashboard_screen.dart';
 
 class AcknowledgementScreen extends StatelessWidget {
   final String applicationId;
@@ -11,50 +11,44 @@ class AcknowledgementScreen extends StatelessWidget {
     required this.jsonData,
   });
 
-  /// Creates a deep copy of the JSON data and removes large Base64 strings for safe display.
-  Map<String, dynamic> _getSanitizedJson() {
-    final copy = json.decode(json.encode(jsonData)); // Deep copy
-    
-    // Sanitize photo
-    if (copy['personalDetails']?['photoBase64'] != null) {
-      copy['personalDetails']['photoBase64'] = '[Image data removed for preview]';
-    }
-
-    // Sanitize document
-    if (copy['supportingDocumentBase64'] != null) {
-      copy['supportingDocumentBase64'] = '[Document data removed for preview]';
-    }
-    
-    return copy;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Acknowledgement'),
+        title: const Text('Acknowledgement Slip'),
         automaticallyImplyLeading: false,
+        backgroundColor: Colors.blue[700],
       ),
       body: Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // Success Icon
               const Icon(Icons.check_circle, size: 100, color: Colors.green),
               const SizedBox(height: 24),
+
+              // Success Message
               const Text(
                 'Application Submitted Successfully!',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
+
+              // Application ID Card
               Container(
-                padding: const EdgeInsets.all(16),
-                color: Colors.blue[50],
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
                 child: Column(
                   children: [
-                    const Text('Your Application ID', style: TextStyle(fontSize: 14)),
+                    const Text('Your Application Reference Number', style: TextStyle(fontSize: 14, color: Colors.blueGrey)),
                     const SizedBox(height: 8),
                     Text(
                       applicationId,
@@ -68,41 +62,30 @@ class AcknowledgementScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
+
               const Text(
-                'An acknowledgement will be sent to your registered mobile number and email.',
+                'An acknowledgement has been sent to your registered mobile number and email. Please keep the reference number for future tracking.',
                 style: TextStyle(fontSize: 14, color: Colors.grey),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('JSON Data for API'),
-                      content: SingleChildScrollView(
-                        child: SelectableText(
-                          const JsonEncoder.withIndent('  ').convert(_getSanitizedJson()),
-                          style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                        ),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Close'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                child: const Text('View JSON Data (Preview)'),
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton(
-                onPressed: () {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                },
-                child: const Text('Go to Home'),
+              const SizedBox(height: 40),
+
+              // Action Buttons
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Force navigation back to the Dashboard (Service List)
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => const DashboardScreen()),
+                      (route) => false,
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700]),
+                  child: const Text('Go to Home', style: TextStyle(fontSize: 16)),
+                ),
               ),
             ],
           ),

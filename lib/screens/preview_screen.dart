@@ -1,118 +1,242 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import '../utils/constants.dart';
 import 'acknowledgement_screen.dart';
 
-class FormPreviewScreen extends StatelessWidget {
+class FormPreviewScreen extends StatefulWidget {
   final Map<String, dynamic> formData;
+  final Map<String, String> displayData;
+  final String photoPath;
+  final String? documentFileName;
 
-  const FormPreviewScreen({super.key, required this.formData});
+  const FormPreviewScreen({
+    super.key, 
+    required this.formData, 
+    required this.displayData,
+    required this.photoPath,
+    this.documentFileName,
+  });
 
-  /// Creates a deep copy of the JSON data and removes large Base64 strings for safe display.
-  Map<String, dynamic> _getSanitizedJson(Map<String, dynamic> originalData) {
-    final copy = json.decode(json.encode(originalData)); // Deep copy
-    
-    // Sanitize photo
-    if (copy['photoBase64'] != null) {
-      copy['photoBase64'] = '[Image data included]';
+  @override
+  State<FormPreviewScreen> createState() => _FormPreviewScreenState();
+}
+
+class _FormPreviewScreenState extends State<FormPreviewScreen> {
+  bool _isLoading = false;
+
+  Future<void> _finalSubmit() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await http.post(
+        Uri.parse(AppConstants.submitEndpoint),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(widget.formData),
+      ).timeout(const Duration(seconds: 120));
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final ack = jsonDecode(response.body);
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => AcknowledgementScreen(
+              applicationId: ack['applicationId'] ?? 'N/A', 
+              jsonData: ack
+            )),
+            (route) => false,
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Server Error: ${response.statusCode}\n${response.body}'))
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Submission Error: $e'))
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-
-    // Sanitize document
-    if (copy['supportingDocumentBase64'] != null) {
-      copy['supportingDocumentBase64'] = '[Document data included]';
-    }
-    
-    return copy;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Application Preview')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Use the sanitized data for display
-          _buildSection('PERSONAL DETAILS', _getSanitizedJson(formData['personalDetails'] ?? {})),
-          const SizedBox(height: 16),
-
-          _buildSection('PRESENT ADDRESS', formData['presentAddress'] ?? {}),
-          const SizedBox(height: 16),
-
-          _buildSection('PERMANENT ADDRESS', formData['permanentAddress'] ?? {}),
-          const SizedBox(height: 16),
-
-          _buildSection('GUARDIAN DETAILS', formData['guardianDetails'] ?? {}),
-          const SizedBox(height: 16),
-
-          const Text('PURPOSE', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text(formData['purpose'] ?? ''),
-          const SizedBox(height: 16),
-
-          const Text('SUPPORTING DOCUMENT', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text(formData['supportingDocumentName'] != null
-              ? 'Uploaded: ${formData['supportingDocumentName']}'
-              : 'Not uploaded'),
-          const SizedBox(height: 16),
-
-          const Text('DECLARATION', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text('Place: ${formData['declaration']?['place'] ?? ''}'),
-          Text('Date: ${formData['declaration']?['date'] ?? ''}'),
-          Text('Agreed: ${formData['declaration']?['agreed'] == true ? 'Yes' : 'No'}'),
-          const SizedBox(height: 32),
-
-          // Action Buttons
-          Row(
+      appBar: AppBar(title: const Text('Preview Application'), backgroundColor: Colors.blue[700]),
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator())
+        : ListView(
+            padding: const EdgeInsets.all(16),
             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Edit'),
+              const Text(
+                'Please review all details before final submission.',
+                style: TextStyle(fontStyle: FontStyle.italic, color: Colors.blueGrey, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              
+              // Photo Preview
+              Center(
+                child: Column(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.blue, width: 2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Image.file(File(widget.photoPath), width: 120, height: 120, fit: BoxFit.cover),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('Applicant Photo', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  ],
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    final appId = 'RC${DateTime.now().millisecondsSinceEpoch}';
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AcknowledgementScreen(
-                          applicationId: appId,
-                          jsonData: formData, // The original, complete data is sent forward
+              const SizedBox(height: 24),
+
+              _buildSection('Personal Details', [
+                'Salutation', 'Name', 'Gender', 'Marital Status', 'Age', 'Aadhaar', 
+                "Father's Name", "Mother's Name", "Husband's Name", 'Mobile', 'Email'
+              ]),
+              
+              _buildSection('Present Address', [
+                'Present District', 'Present Tehsil', 'Present Village', 'Present RI', 
+                'Present Police Station', 'Present Post Office', 'Present PIN', 
+                'Years Residing', 'Months Residing'
+              ]),
+
+              _buildSection('Permanent Address', [
+                'Same as Present', 'Permanent State', 'Permanent District', 'Permanent Tehsil', 
+                'Permanent Village', 'Permanent RI', 'Permanent Police Station', 
+                'Permanent Post Office', 'Permanent PIN'
+              ]),
+
+              _buildSection('Guardian Details', [
+                'Other Person Filling?', 'Guardian Name', 'Guardian Relation'
+              ]),
+
+              _buildSection('Purpose & Enclosures', [
+                'Purpose', 'Document Type'
+              ]),
+              
+              if (widget.documentFileName != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.attach_file, size: 16, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Attached: ${widget.documentFileName}', 
+                          style: const TextStyle(fontSize: 13, color: Colors.blueGrey, fontStyle: FontStyle.italic)
                         ),
                       ),
-                    );
-                  },
-                  child: const Text('Confirm & Submit'),
+                    ],
+                  ),
                 ),
+
+              _buildSection('Apply to Office', [
+                'Apply to'
+              ]),
+
+              _buildSection('Declaration', [
+                'Place'
+              ]),
+
+              const SizedBox(height: 40),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        side: const BorderSide(color: Colors.blue),
+                      ),
+                      child: const Text('Edit Details'),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _finalSubmit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green[700],
+                        padding: const EdgeInsets.symmetric(vertical: 15)
+                      ),
+                      child: const Text('Confirm & Submit', style: TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: 30),
             ],
           ),
-        ],
-      ),
     );
   }
 
-  Widget _buildSection(String title, Map<String, dynamic> data) {
+  Widget _buildSection(String title, List<String> fields) {
+    List<Widget> rows = [];
+    for (var field in fields) {
+      if (widget.displayData.containsKey(field) && widget.displayData[field]!.isNotEmpty) {
+        rows.add(_buildInfoRow(field, widget.displayData[field]!));
+      }
+    }
+
+    if (rows.isEmpty) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 24),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          decoration: BoxDecoration(
+            color: Colors.blue[700],
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            title.toUpperCase(), 
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...rows,
         const Divider(),
-        ...data.entries.map((entry) {
-          if (entry.value != null && entry.value.toString().isNotEmpty && entry.value != false) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text('${entry.key}: ${entry.value}'),
-            );
-          }
-          return const SizedBox.shrink();
-        }),
       ],
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 12.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 2, 
+            child: Text(
+              label, 
+              style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.black54, fontSize: 13)
+            )
+          ),
+          const Text(': ', style: TextStyle(fontWeight: FontWeight.bold)),
+          Expanded(
+            flex: 3, 
+            child: Text(
+              value, 
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)
+            )
+          ),
+        ],
+      ),
     );
   }
 }
