@@ -375,7 +375,7 @@ class _ResidentCertificateFormState extends State<ResidentCertificateForm> {
       "fathername": fatherNameController.text.trim().toUpperCase(),
       "mothername": motherNameController.text.trim().toUpperCase(),
       if (gender == 'Female' && (maritalStatus == 'Married' ||
-          maritalStatus == 'Widow')) "husbandname": husbandNameController.text
+          maritalStatus == 'Widow')) "husbandsname": husbandNameController.text
           .trim().toUpperCase(),
       "mobileno": mobileController.text.trim(),
       "email": emailController.text.trim(),
@@ -420,11 +420,11 @@ class _ResidentCertificateFormState extends State<ResidentCertificateForm> {
           ? "Yes"
           : "NO",
       if (anyPersonOtherThanApplicant ==
-          'Yes') "otherpersonname": otherPersonNameController.text
+          'Yes') "anypersionotherthancandidatename": otherPersonNameController.text
           .trim()
           .toUpperCase(),
       if (anyPersonOtherThanApplicant ==
-          'Yes') "otherpersonrelation": otherPersonRelationController.text
+          'Yes') "anypersionotherthancandidaterelation": otherPersonRelationController.text
           .trim().toUpperCase(),
       "purpose": purposeController.text.trim().toUpperCase(),
       "place": placeController.text.trim().toUpperCase(),
