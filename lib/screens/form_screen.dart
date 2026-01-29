@@ -470,7 +470,7 @@ class _ResidentCertificateFormState extends State<ResidentCertificateForm> {
       return;
     }
     if (selectedEnclosureDoc == null) {
-       ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please select an enclosure document type.')));
       return;
     }
@@ -962,7 +962,7 @@ class _ResidentCertificateFormState extends State<ResidentCertificateForm> {
               presentRIs.clear();
               presentVillages.clear();
 
-               _updateApplyToOffice(presentTehsilName!);
+              _updateApplyToOffice(presentTehsilName!);
             } else {
               permanentTehsilCode = orgCode;
               permanentTehsilOrgCode = teh['org_code'];
@@ -1000,34 +1000,34 @@ class _ResidentCertificateFormState extends State<ResidentCertificateForm> {
             child: Text(r['name']?.toString() ?? ''),
           );
         }).toList(),
-          onChanged: (orgCode) {
-            if (orgCode == null) return;
-            final ri = currentRIs.firstWhere((r) => r['org_code'] == orgCode);
-            setState(() {
-              if (isPresent) {
-                presentRICode = orgCode;
-                presentRIOrgCode = ri['org_code'];
-                presentRIName = ri['name'];
-                // 🔥 CLEAR VILLAGES
-                presentVillageCode = null;
-                presentVillages.clear();
-              } else {
-                permanentRICode = orgCode;
-                permanentRIOrgCode = ri['org_code'];
-                permanentRIName = ri['name'];
-                permanentVillageCode = null;
-                permanentVillages.clear();
-              }
-            });
+        onChanged: (orgCode) {
+          if (orgCode == null) return;
+          final ri = currentRIs.firstWhere((r) => r['org_code'] == orgCode);
+          setState(() {
+            if (isPresent) {
+              presentRICode = orgCode;
+              presentRIOrgCode = ri['org_code'];
+              presentRIName = ri['name'];
+              // 🔥 CLEAR VILLAGES
+              presentVillageCode = null;
+              presentVillages.clear();
+            } else {
+              permanentRICode = orgCode;
+              permanentRIOrgCode = ri['org_code'];
+              permanentRIName = ri['name'];
+              permanentVillageCode = null;
+              permanentVillages.clear();
+            }
+          });
 
-            isPresent
-                ? _loadPresentVillages(orgCode)
-                : _loadPermanentVillages(orgCode);
-          },
+          isPresent
+              ? _loadPresentVillages(orgCode)
+              : _loadPermanentVillages(orgCode);
+        },
         validator: villageNotInList ? null : (v) => v == null ? 'Required' : null,
       ),
 
-          const SizedBox(height: 16),
+      const SizedBox(height: 16),
 
       /// VILLAGE
       DropdownButtonFormField<String>(
@@ -1070,7 +1070,7 @@ class _ResidentCertificateFormState extends State<ResidentCertificateForm> {
                 presentVillageNotInList = v ?? false;
                 presentVillageCode = null;
                 presentVillageName = null;
-                 if (v == false) {
+                if (v == false) {
                   presentVillageCustomController.clear();
                 }
               } else {

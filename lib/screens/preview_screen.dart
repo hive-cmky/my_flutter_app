@@ -66,7 +66,7 @@ class _FormPreviewScreenState extends State<FormPreviewScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext contextIncome) {
     return Scaffold(
       appBar: AppBar(title: const Text('Preview Application'), backgroundColor: Colors.blue[700]),
       body: _isLoading 
@@ -154,7 +154,7 @@ class _FormPreviewScreenState extends State<FormPreviewScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pop(contextIncome),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 15),
                         side: const BorderSide(color: Colors.blue),

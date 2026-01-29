@@ -220,7 +220,7 @@ class DatabaseHelper {
 
     final db = await coverageDatabase;
 
-    print('🔍 DEBUG: Searching coverage for tehsil: "$tehsilName"');
+    print('DEBUG: Searching coverage for tehsil: "$tehsilName"');
 
     try {
       // Clean the tehsil name for matching
@@ -285,11 +285,11 @@ class DatabaseHelper {
         }
       }
 
-      print('❌ DEBUG: No coverage location found for "$tehsilName"');
+      print('DEBUG: No coverage location found for "$tehsilName"');
       return null;
 
     } catch (e) {
-      print('❌ ERROR in getCoverageLocation: $e');
+      print('ERROR in getCoverageLocation: $e');
       return null;
     }
   }

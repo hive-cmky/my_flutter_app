@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'database/database_helper.dart';
 import 'screens/login_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -67,7 +68,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const LoginScreen(), // Start with Login
+      home: const SplashScreen(),
     );
   }
 }

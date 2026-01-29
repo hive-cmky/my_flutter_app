@@ -11,6 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.2.1
+  shared_preferences: ^2.2.2
   sqflite: ^2.3.3
   sqflite_common_ffi: ^2.3.3
   path: ^1.9.0
@@ -24,6 +25,13 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.13.1
 
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/images/oglogo.png"
+  adaptive_icon_background: "#F57C00"   # Orange color
+  adaptive_icon_foreground: "assets/images/oglogo.png"
+
 flutter_icons:
   android: "launcher_icon"
   ios: true
@@ -32,7 +40,8 @@ flutter_icons:
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/oglogo.png
+    - assets/images/
+    - assets/images/mohan-majhi-cm_2.png
     - assets/db/coverage_location.db
     - assets/db/lgd_master.db
     - assets/db/ric_master.db
